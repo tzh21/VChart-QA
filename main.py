@@ -1,5 +1,7 @@
 from flask import Flask, request, render_template
-from qa import qa_chain
+from qa import getQaChain
+
+qaChain = getQaChain()
 
 app = Flask(__name__)  # Flask APP
 
@@ -10,7 +12,7 @@ def home():
         question = request.form.get("question")
 
         # RetrievalQA链 - 读入问题，生成答案
-        result = qa_chain({"query": question})
+        result = qaChain({"query": question})
 
         # 把大模型的回答结果返回网页进行渲染
         return render_template("index.html", result=result)

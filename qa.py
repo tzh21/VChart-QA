@@ -1,8 +1,8 @@
 # 1.Load 导入Document Loaders
 import os
 from langchain_community.document_loaders import TextLoader
-import logging
 from embedding import DoubaoEmbeddings
+import logging
 
 # 设置日志
 logging.basicConfig(format='%(levelname)s - %(message)s')
@@ -25,7 +25,6 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=10)
 chunked_documents = text_splitter.split_documents(documents)
 
-
 # 3.Store 将分割嵌入并存储在矢量数据库Qdrant中
 from langchain_community.vectorstores import Qdrant
 
@@ -35,7 +34,6 @@ vectorstore = Qdrant.from_documents(
         model=os.environ["EMBEDDING_MODELEND"],
     ),  # 用OpenAI的Embedding Model做嵌入
     location=":memory:",  # in-memory 存储
-    # location="storage",  # in-memory 存储
     collection_name="my_documents",
 )  # 指定collection_name
 
@@ -47,17 +45,16 @@ from langchain.retrievers.multi_query import (
 )  # MultiQueryRetriever工具
 from langchain.chains import RetrievalQA  # RetrievalQA链
 
-# 设置Logging
-logging.basicConfig()
-logging.getLogger("langchain.retrievers.multi_query").setLevel(logging.INFO)
+def getQaChain():
+    # 实例化一个大模型工具 - OpenAI的GPT-3.5
+    llm = ChatOpenAI(model=os.environ["LLM_MODELEND"], temperature=0)
 
-# 实例化一个大模型工具 - OpenAI的GPT-3.5
-llm = ChatOpenAI(model=os.environ["LLM_MODELEND"], temperature=0)
+    # 实例化一个MultiQueryRetriever
+    retriever_from_llm = MultiQueryRetriever.from_llm(
+        retriever=vectorstore.as_retriever(), llm=llm
+    )
 
-# 实例化一个MultiQueryRetriever
-retriever_from_llm = MultiQueryRetriever.from_llm(
-    retriever=vectorstore.as_retriever(), llm=llm
-)
+    # 实例化一个RetrievalQA链
+    qa_chain = RetrievalQA.from_chain_type(llm, retriever=retriever_from_llm)
 
-# 实例化一个RetrievalQA链
-qa_chain = RetrievalQA.from_chain_type(llm, retriever=retriever_from_llm)
+    return qa_chain
