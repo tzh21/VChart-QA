@@ -11,12 +11,12 @@ from langchain.chains import RetrievalQA  # RetrievalQA链
 
 logger = logging.getLogger(__name__)
 
+'''从本地目录加载 vector store，并加入新的 documents'''
 def NewVectorStore(documents: list[Document]) -> Chroma:
     vectorStore = Chroma(
         embedding_function=DoubaoEmbeddings(model=os.environ["EMBEDDING_MODELEND"]),
         persist_directory="storage"
     )
-    logger.info("chroma initialized")
 
     # 获取已有文档的文件路径
     existing_file_paths = set()
@@ -33,28 +33,7 @@ def NewVectorStore(documents: list[Document]) -> Chroma:
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=200, chunk_overlap=10)
     chunked_documents = text_splitter.split_documents(unique_documents)
-    logger.info("documents split")
 
     if len(unique_documents) > 0:
         vectorStore.add_documents(chunked_documents)
-    logger.info("documents added")
     return vectorStore
-
-def GetQaChain(vectorStore: Chroma):
-    # 实例化一个大模型工具 - OpenAI的GPT-3.5
-    llm = ChatOpenAI(model=os.environ["LLM_MODELEND"], temperature=0)
-
-    # 实例化一个MultiQueryRetriever
-    retriever_from_llm = MultiQueryRetriever.from_llm(
-        retriever=vectorStore.as_retriever(), llm=llm
-    )
-
-    # 实例化一个RetrievalQA链
-    qa_chain = RetrievalQA.from_chain_type(llm, retriever=retriever_from_llm)
-
-    return qa_chain
-
-def TestQaChain(vectorStore: Chroma) -> list[Document]:
-    retriever = vectorStore.as_retriever()
-    docs = retriever.invoke("Does the tooltip support changing the background color?")
-    return docs
